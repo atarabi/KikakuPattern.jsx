@@ -4,7 +4,6 @@
  *  Author: Kareobana(http://atarabi.com/)
  *  License: MIT
  *  Dependencies:
- *    KIKAKU.JSON
  *    KIKAKU.Utils 1.0.1
  *    KIKAKU.UIBuilder 2.1.0
  */
@@ -14,8 +13,7 @@
 
 (function(global) {
 	//Lib
-	var JSON = KIKAKU.JSON,
-		Utils = KIKAKU.Utils,
+	var Utils = KIKAKU.Utils,
 		UIBuilder = KIKAKU.UIBuilder,
 		PARAMETER_TYPE = UIBuilder.PARAMETER_TYPE;
 	
