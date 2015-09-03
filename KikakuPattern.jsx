@@ -4,7 +4,6 @@
  *  Author: Kareobana(http://atarabi.com/)
  *  License: MIT
  *  Dependencies:
- *    KIKAKU.JSON
  *    KIKAKU.Utils 1.0.1
  *    KIKAKU.UIBuilder 2.1.0
  */
@@ -12,9 +11,15 @@
 /// <reference path="./typings/kikaku/kikaku.d.ts" />
 (function (global) {
     //Lib
-    var JSON = KIKAKU.JSON, Utils = KIKAKU.Utils, UIBuilder = KIKAKU.UIBuilder, PARAMETER_TYPE = UIBuilder.PARAMETER_TYPE;
+    var Utils = KIKAKU.Utils, UIBuilder = KIKAKU.UIBuilder, PARAMETER_TYPE = UIBuilder.PARAMETER_TYPE;
     //Effect
     var KIKAKU_PATTERN_MATCHNAME = 'KikakuPattern';
+    var TRANSFORM_MATCHNAME = 'ADBE Transform Group';
+    var TRANSFORM_CHILDREN_MATCHNAMES = ['ADBE Anchor Point', 'ADBE Position', 'ADBE Scale', 'ADBE Rotate Z', 'ADBE Opacity'];
+    var TARGET = {
+        EFFECT: 'Effect',
+        TRANSFORM: 'Transform'
+    };
     var PARAM = {
         TRANSFORM_START: 157,
         TRANSFORM_END: 163,
@@ -63,7 +68,7 @@
     //Global Variables
     var g_transform = {
         layer: null,
-        effect: null
+        source: null
     };
     //Utility
     function setValue(property, value, time) {
@@ -84,7 +89,7 @@
     builder
         .add(PARAMETER_TYPE.PANEL, 'Transform')
         .add(PARAMETER_TYPE.STATICTEXT, 'Layer', '')
-        .add(PARAMETER_TYPE.STATICTEXT, 'Effect', '')
+        .add(PARAMETER_TYPE.STATICTEXT, 'Source', '')
         .add(PARAMETER_TYPE.SCRIPT, 'Copy', function () {
         var self = this;
         var layer = Utils.getSelectedLayer();
@@ -100,18 +105,15 @@
                 break;
             }
         }
-        if (!effect) {
-            return;
-        }
+        var source = effect ? TARGET.EFFECT + '/' + effect.name : TARGET.TRANSFORM;
         g_transform.layer = layer;
-        g_transform.effect = effect.name;
+        g_transform.source = source;
         self.set('Layer', layer.name);
-        self.set('Effect', effect.name);
+        self.set('Source', source);
     })
         .add(PARAMETER_TYPE.SCRIPT, 'Paste', function () {
         var self = this;
         var source_layer = g_transform.layer;
-        var source_effect_name = g_transform.effect;
         if (!source_layer) {
             return;
         }
@@ -119,57 +121,103 @@
             source_layer.name = source_layer.name;
         }
         catch (e) {
-            g_transform.layer = g_transform.effect = null;
+            g_transform.layer = g_transform.source = null;
             self.set('Layer', '');
             self.set('Effect', '');
-            return;
+            return alert('Cannot find the source layer.');
         }
-        var has_effect = false;
-        var source_effect;
-        var effects = source_layer.property('ADBE Effect Parade');
-        for (var i = 1, l = effects.numProperties; i <= l; i++) {
-            var _effect = effects.property(i);
-            if (_effect.matchName === KIKAKU_PATTERN_MATCHNAME && _effect.name === source_effect_name) {
-                source_effect = _effect;
-                has_effect = true;
-                break;
+        var target_layer = Utils.getSelectedLayer();
+        if (!target_layer) {
+            return alert('Select a target layer.');
+        }
+        var source = g_transform.source.split('/')[0];
+        var source_property;
+        if (source === TARGET.EFFECT) {
+            var source_effect_name = g_transform.source.split('/')[1];
+            var has_effect = false;
+            var effects = source_layer.property('ADBE Effect Parade');
+            for (var i = 1, l = effects.numProperties; i <= l; i++) {
+                var _effect = effects.property(i);
+                if (_effect.matchName === KIKAKU_PATTERN_MATCHNAME && _effect.name === source_effect_name) {
+                    source_property = _effect;
+                    has_effect = true;
+                    break;
+                }
+            }
+            if (!has_effect) {
+                g_transform.layer = g_transform.source = null;
+                self.set('Layer', '');
+                self.set('Source', '');
+                return;
             }
         }
-        if (!has_effect) {
-            g_transform.layer = g_transform.effect = null;
-            self.set('Layer', '');
-            self.set('Effect', '');
-            return;
+        else if (source === TARGET.TRANSFORM) {
+            source_property = source_layer.property(TRANSFORM_MATCHNAME);
         }
-        var layer = Utils.getSelectedLayer();
-        if (!layer) {
-            return;
-        }
-        var selected_properties = layer.selectedProperties.slice();
-        var effect;
+        var target;
+        var selected_properties = target_layer.selectedProperties.slice();
+        var target_property;
         for (var i = 0, l = selected_properties.length; i < l; i++) {
             var selected_property = selected_properties[i];
             if (selected_property.isEffect && selected_property.matchName === KIKAKU_PATTERN_MATCHNAME) {
-                effect = selected_property;
+                target_property = selected_property;
                 break;
             }
         }
-        if (!effect || source_effect === effect) {
-            return;
+        if (target_property) {
+            target = TARGET.EFFECT;
         }
+        else {
+            target = TARGET.TRANSFORM;
+            target_property = target_layer.property(TRANSFORM_MATCHNAME);
+        }
+        //paste
         var prefix = '';
-        if (source_layer === layer) {
+        if (source_layer === target_layer) {
         }
-        else if (source_layer.containingComp === layer.containingComp) {
+        else if (source_layer.containingComp === target_layer.containingComp) {
             prefix = 'thisComp.layer("' + source_layer.name + '").';
         }
         else {
             prefix = 'comp("' + source_layer.containingComp.name + '").layer("' + source_layer.name + '").';
         }
-        prefix += 'effect("' + source_effect.name + '")';
-        for (var i = PARAM.TRANSFORM_START + 1; i < PARAM.TRANSFORM_END; i++) {
-            var property = effect.property(i);
-            property.expression = prefix + '(' + i + ')';
+        if (source === TARGET.EFFECT) {
+            prefix += 'effect("' + source_property.name + '")';
+            if (target === TARGET.EFFECT) {
+                for (var i = PARAM.TRANSFORM_START + 1; i < PARAM.TRANSFORM_END; i++) {
+                    var property = target_property.property(i);
+                    property.expression = prefix + '(' + i + ')';
+                }
+            }
+            else if (target === TARGET.TRANSFORM) {
+                for (var i = PARAM.TRANSFORM_START + 1, j = 0; i < PARAM.TRANSFORM_END; i++, j++) {
+                    var transform_match_name = TRANSFORM_CHILDREN_MATCHNAMES[j];
+                    var property = target_property.property(transform_match_name);
+                    if (transform_match_name.indexOf('Scale') >= 0) {
+                        property.expression = 'var s = ' + prefix + '(' + i + ');\n[s, s, s];';
+                    }
+                    else {
+                        property.expression = prefix + '(' + i + ')';
+                    }
+                }
+            }
+        }
+        else if (source === TARGET.TRANSFORM) {
+            prefix += 'transform';
+            if (target === TARGET.EFFECT) {
+                for (var i = PARAM.TRANSFORM_START + 1, j = 0; i < PARAM.TRANSFORM_END; i++, j++) {
+                    var transform_match_name = TRANSFORM_CHILDREN_MATCHNAMES[j];
+                    var property = target_property.property(i);
+                    if (transform_match_name.indexOf('Scale') >= 0) {
+                        property.expression = 'var s = ' + prefix + '("' + transform_match_name + '");\ns[0];';
+                    }
+                    else {
+                        property.expression = prefix + '("' + transform_match_name + '")';
+                    }
+                }
+            }
+            else if (target === TARGET.TRANSFORM) {
+            }
         }
     })
         .add(PARAMETER_TYPE.PANEL_END, 'Transform End')

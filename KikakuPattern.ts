@@ -19,6 +19,13 @@
 	
 	//Effect
 	const KIKAKU_PATTERN_MATCHNAME = 'KikakuPattern';
+	const TRANSFORM_MATCHNAME = 'ADBE Transform Group';
+	const TRANSFORM_CHILDREN_MATCHNAMES = ['ADBE Anchor Point', 'ADBE Position', 'ADBE Scale', 'ADBE Rotate Z', 'ADBE Opacity'];
+	
+	const TARGET = {
+		EFFECT: 'Effect',
+		TRANSFORM: 'Transform'	
+	};
 	
 	const PARAM = {
 		TRANSFORM_START: 157,
@@ -71,9 +78,9 @@
 	};
 	
 	//Global Variables
-	var g_transform: { layer: AVLayer; effect: string; } = {
+	var g_transform: { layer: AVLayer; source: string; } = {
 		layer: null,
-		effect: null,
+		source: null,
 	};
 	
 	//Utility
@@ -96,7 +103,7 @@
 	builder
 		.add(PARAMETER_TYPE.PANEL, 'Transform')
 		.add(PARAMETER_TYPE.STATICTEXT, 'Layer', '')
-		.add(PARAMETER_TYPE.STATICTEXT, 'Effect', '')
+		.add(PARAMETER_TYPE.STATICTEXT, 'Source', '')
 		.add(PARAMETER_TYPE.SCRIPT, 'Copy', function() {
 			const self: KIKAKU.UIBuilder = <KIKAKU.UIBuilder>this;
 			const layer: AVLayer = <AVLayer>Utils.getSelectedLayer();
@@ -107,94 +114,128 @@
 			let selected_properties = layer.selectedProperties.slice();
 			let effect: PropertyGroup;
 			for (let i = 0, l = selected_properties.length; i < l; i++) {
-				let selected_property = selected_properties[i];
+				const selected_property = selected_properties[i];
 				if (selected_property.isEffect && selected_property.matchName === KIKAKU_PATTERN_MATCHNAME) {
 					effect = <PropertyGroup>selected_property;
 					break;
 				}
 			}
-
-			if (!effect) {
-				return;
-			}
+			
+			let source: string = effect ? TARGET.EFFECT + '/' + effect.name : TARGET.TRANSFORM;
 
 			g_transform.layer = layer;
-			g_transform.effect = effect.name;
-
+			g_transform.source = source;
+	
 			self.set('Layer', layer.name);
-			self.set('Effect', effect.name);
+			self.set('Source', source);
 		})
 		.add(PARAMETER_TYPE.SCRIPT, 'Paste', function() {
 			const self: KIKAKU.UIBuilder = <KIKAKU.UIBuilder>this;
+			
 			const source_layer: AVLayer = g_transform.layer;
-			const source_effect_name = g_transform.effect;
 			if (!source_layer) {
 				return;
 			}
-
 			try {
 				source_layer.name = source_layer.name;
 			} catch (e) {
-				g_transform.layer = g_transform.effect = null;
-
+				g_transform.layer = g_transform.source = null;
 				self.set('Layer', '');
 				self.set('Effect', '');
-				return;
+				return alert('Cannot find the source layer.');
 			}
-
-			let has_effect = false;
-			let source_effect: PropertyGroup;
-			let effects = <PropertyGroup>source_layer.property('ADBE Effect Parade');
-			for (let i = 1, l = effects.numProperties; i <= l; i++) {
-				let _effect = effects.property(i);
-				if (_effect.matchName === KIKAKU_PATTERN_MATCHNAME && _effect.name === source_effect_name) {
-					source_effect = <PropertyGroup>_effect;
-					has_effect = true;
-					break;
+			
+			const target_layer: Layer = <Layer>Utils.getSelectedLayer();
+			if (!target_layer) {
+				return alert('Select a target layer.');
+			}
+			
+			const source = g_transform.source.split('/')[0];
+			let source_property: PropertyGroup;
+			if (source === TARGET.EFFECT) {
+				const source_effect_name = g_transform.source.split('/')[1];
+				let has_effect = false;
+				let effects = <PropertyGroup>source_layer.property('ADBE Effect Parade');
+				for (let i = 1, l = effects.numProperties; i <= l; i++) {
+					const _effect = effects.property(i);
+					if (_effect.matchName === KIKAKU_PATTERN_MATCHNAME && _effect.name === source_effect_name) {
+						source_property = <PropertyGroup>_effect;
+						has_effect = true;
+						break;
+					}
 				}
+	
+				if (!has_effect) {
+					g_transform.layer = g_transform.source = null;
+					self.set('Layer', '');
+					self.set('Source', '');
+					return;
+				}	
+			} else if (source === TARGET.TRANSFORM) {
+				source_property = <PropertyGroup>source_layer.property(TRANSFORM_MATCHNAME);
 			}
-
-			if (!has_effect) {
-				g_transform.layer = g_transform.effect = null;
-
-				self.set('Layer', '');
-				self.set('Effect', '');
-				return;
-			}
-
-			const layer: Layer = <Layer>Utils.getSelectedLayer();
-			if (!layer) {
-				return;
-			}
-
-			let selected_properties = layer.selectedProperties.slice();
-			let effect: PropertyGroup;
+			
+			let target;
+			let selected_properties = target_layer.selectedProperties.slice();
+			let target_property: PropertyGroup;
 			for (let i = 0, l = selected_properties.length; i < l; i++) {
-				let selected_property = selected_properties[i];
+				const selected_property = selected_properties[i];
 				if (selected_property.isEffect && selected_property.matchName === KIKAKU_PATTERN_MATCHNAME) {
-					effect = <PropertyGroup>selected_property;
+					target_property = <PropertyGroup>selected_property;
 					break;
 				}
 			}
-
-			if (!effect || source_effect === effect) {
-				return;
+			
+			if (target_property) {
+				target = TARGET.EFFECT;
+			} else {
+				target = TARGET.TRANSFORM;
+				target_property = <PropertyGroup>target_layer.property(TRANSFORM_MATCHNAME);
 			}
-
+			
+			//paste
 			let prefix = '';
-			if (source_layer === layer) {
+			if (source_layer === target_layer) {
 				//pass
-			} else if (source_layer.containingComp === layer.containingComp) {
+			} else if (source_layer.containingComp === target_layer.containingComp) {
 				prefix = 'thisComp.layer("' + source_layer.name + '").';
 			} else {
 				prefix = 'comp("' + source_layer.containingComp.name + '").layer("' + source_layer.name + '").';
 			}
-
-			prefix += 'effect("' + source_effect.name + '")';
-
-			for (let i = PARAM.TRANSFORM_START + 1; i < PARAM.TRANSFORM_END; i++) {
-				let property: Property = <Property>effect.property(i);
-				property.expression = prefix + '(' + i + ')';
+			
+			if (source === TARGET.EFFECT) {
+				prefix += 'effect("' + source_property.name + '")';
+				if (target === TARGET.EFFECT) {
+					for (let i = PARAM.TRANSFORM_START + 1; i < PARAM.TRANSFORM_END; i++) {
+						const property: Property = <Property>target_property.property(i);
+						property.expression = prefix + '(' + i + ')';
+					}
+				} else if (target === TARGET.TRANSFORM) {
+					for (let i = PARAM.TRANSFORM_START + 1, j = 0; i < PARAM.TRANSFORM_END; i++, j++) {
+						const transform_match_name = TRANSFORM_CHILDREN_MATCHNAMES[j];
+						const property: Property = <Property>target_property.property(transform_match_name);
+						if (transform_match_name.indexOf('Scale') >= 0) {
+							property.expression = 'var s = ' + prefix + '(' + i + ');\n[s, s, s];';
+						} else {
+							property.expression = prefix + '(' + i + ')';
+						}
+					}
+				}
+			} else if (source === TARGET.TRANSFORM) {
+				prefix += 'transform';
+				if (target === TARGET.EFFECT) {
+					for (let i = PARAM.TRANSFORM_START + 1, j = 0; i < PARAM.TRANSFORM_END; i++, j++) {
+						const transform_match_name = TRANSFORM_CHILDREN_MATCHNAMES[j];
+						const property: Property = <Property>target_property.property(i);
+						if (transform_match_name.indexOf('Scale') >= 0) {
+							property.expression = 'var s = ' + prefix + '("' + transform_match_name + '");\ns[0];';
+						} else {
+							property.expression = prefix + '("' + transform_match_name + '")';
+						}
+					}
+				} else if (target === TARGET.TRANSFORM) {
+					//pass
+				}
 			}
 		})
 		.add(PARAMETER_TYPE.PANEL_END, 'Transform End')
