@@ -4,11 +4,10 @@
  *  Author: Kareobana(http://atarabi.com/)
  *  License: MIT
  *  Dependencies:
- *    KIKAKU.Utils 1.0.1
- *    KIKAKU.UIBuilder 2.1.0
+ *    Kikaku.jsx 0.0.0
  */
 /// <reference path="./typings/aftereffects/ae.d.ts" />
-/// <reference path="./typings/kikaku/kikaku.d.ts" />
+/// <reference path="./typings/kikaku/Kikaku.d.ts" />
 (function (global) {
     //Lib
     var Utils = KIKAKU.Utils, UIBuilder = KIKAKU.UIBuilder, PARAMETER_TYPE = UIBuilder.PARAMETER_TYPE;
