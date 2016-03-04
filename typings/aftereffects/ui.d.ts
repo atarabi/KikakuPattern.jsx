@@ -6,6 +6,8 @@ declare type Margins = [number, number, number, number];
 
 declare type Point = [number, number];
 
+declare type Alignment = number | 'top' | 'bottom' | 'left' | 'right' | 'fill' | 'center';
+
 declare module ScriptUI {
 	export enum Alignment {
 		TOP,
@@ -46,19 +48,9 @@ declare class ScriptUI {
 	static newImage(normal: string, disabled: string, pressed: string, rollover: string): ScriptUIImage;
 }
 
-declare module ScriptUIGraphics {
-	export enum BrushType {
-		SOLID_COLOR,
-		THEME_COLOR
-	}
-	
-	export enum PenType {
-		SOLID_COLOR,
-		THEME_COLOR
-	}
-}
-
 declare class ScriptUIGraphics {
+	BrushType: {SOLID_COLOR: number; THEME_COLOR: number;};
+	PenType: {SOLID_COLOR: number; THEME_COLOR: number;};
 	backgroundColor: ScriptUIBrush;
 	currentPath: ScriptUIPath;
 	currentPoint: Point;
@@ -77,9 +69,9 @@ declare class ScriptUIGraphics {
 	lineto(x: number, y: number): Point;
 	measureString(text: string, font: ScriptUIFont, boundingWidth?: number): Dimension;
 	moveto(x: number, y: number): Point;
-	newBrush(type: ScriptUIGraphics.BrushType, color: [number, number, number, number] | string): ScriptUIBrush;
+	newBrush(brushType: number, color: [number, number, number, number] | string): ScriptUIBrush;
 	newPath(): ScriptUIPath;
-	newPen(type: ScriptUIGraphics.PenType, color: [number, number, number, number] | string, lineWidth: number): ScriptUIPen;
+	newPen(penType: number, color: [number, number, number, number] | string, lineWidth: number): ScriptUIPen;
 	rectPath(left: number, top: number, width?: number, height?: number): Point;
 	strokePath(pen: ScriptUIPen): void;
 }
@@ -87,7 +79,7 @@ declare class ScriptUIGraphics {
 declare class ScriptUIBrush {
 	color: [number, number, number, number];
 	theme: string;
-	type: ScriptUIGraphics.BrushType;
+	type: number;
 }
 
 declare class ScriptUIFont {
@@ -111,7 +103,7 @@ declare class ScriptUIPen {
 	color: [number, number, number, number];
 	lineWidth: number;
 	theme: string;
-	type: ScriptUIGraphics.PenType;
+	type: number;
 }
 
 declare class DrawState {
@@ -176,13 +168,18 @@ declare class MouseEvent extends UIEvent {
 	initMouseEvent (eventName: string, bubble: boolean, isCancelable: boolean, view: any, detail: number, screenX: number, screenY: number, clientX: number, clientY: number, ctrlKey: boolean, altKey: boolean, shiftKey: boolean, metaKey: boolean, button: number, relatedTarget?: any): void;
 }
 
-declare class AutoLayoutManager {
+declare interface _LayoutManager {
 	layout(recalculate?: boolean): void;
 	resize(): void;
 }
 
+declare class AutoLayoutManager implements _LayoutManager {
+  layout(recalculate?: boolean): void;
+	resize(): void;
+}
+
 interface _TitleLayout {
-	alignment: [string, string];
+	alignment: [Alignment, Alignment];
 	characters: number;
 	spacing: number;
 	margins: Margins;
@@ -191,20 +188,20 @@ interface _TitleLayout {
 }
 
 declare class _WindowOrContainer {
-	alignChildren: string | [string, string];
-	alignment: string | [string, string];
+	alignChildren: Alignment | [Alignment, Alignment];
+	alignment: Alignment | [Alignment, Alignment];
 	bounds: Bounds;
-	children: any[];
+	children: (_Container|_Control)[];
 	enabled: boolean;
 	graphics: ScriptUIGraphics;
 	helpTip: string;
-	layout: AutoLayoutManager;
+	layout: _LayoutManager;
 	location: Point;
-	margins: Margins;
+	margins: Margins|number;
 	maximumSize: Dimension;
 	minimumSize: Dimension;
-	orientation: string;
-	parent: any;
+	orientation: 'row' | 'column' | 'stack';
+	parent: _WindowOrContainer;
 	preferredSize: Dimension;
 	properties: any;
 	size: Dimension;
@@ -214,25 +211,25 @@ declare class _WindowOrContainer {
 	window: Window;
 	windowBounds: Bounds;
 	
-	add(button: string, bounds?: Bounds, text?: string, creation_properties?: {name?: string;}): any;
-	add(checkbox: string, bounds?: Bounds, text?: string, creation_properties?: {name?: string;}): any;
-	add(dropdownlist: string, bounds: Bounds, items?: string[], creation_properties?: {name?: string; items?: string[];}): any;
-	add(edittext: string, bounds?: Bounds, text?: string, creation_properties?: {name?: string; readonly?: boolean; noecho?: boolean; enterKeySignalsOnChange?: boolean; borderless?: boolean; multiline?: boolean; scrollable?: boolean;}): any;
-	add(flashplayer: string, bounds?: Bounds, movieToLoad?: string | File, creation_properties?: {name?: string;}): any;
-	add(group: string, bounds?: Bounds, creation_properties?: {name?: string;}): any;
-	add(iconbutton: string, bounds?: Bounds, icon?: string | File, creation_properties?: {name?: string; style?: string; toggle?: boolean;}): any;
-	add(image: string, bounds?: Bounds, icon?: string | File, creation_properties?: {name?: string;}): any;
-	add(listbox: string, bounds: Bounds, items?: string[], creation_properties?: {name?: string; multiselect?: boolean; items?: string[]; numberOfColumns?: number; showHeaders?: boolean; columnWidths?: number[]; columnTitles?: string[];}): any;
-	add(panel: string, bounds?: Bounds, text?: string, creation_properties?: {name?: string; borderStyle?: string; su1PanelCoordinates?: boolean;}): any;
-	add(progressbar: string, bounds?: Bounds, value?: number, minvalue?: number, maxvalue?: number, creation_properties?: {name?: string;}): any;
-	add(radiobutton: string, bounds?: Bounds, text?: string, creation_properties?: {name?: string;}): any;
-	add(scrollbar: string, bounds?: Bounds, value?: number, minvalue?: number, maxvalue?: number, creation_properties?: {name?: string;}): any;
-	add(slider: string, bounds?: Bounds, value?: number, minvalue?: number, maxvalue?: number, creation_properties?: {name?: string;}): any;
-	add(statictext: string, bounds?: Bounds, text?: string, creation_properties?: {name?: string; multiline?: boolean; scrolling?: boolean; truncate?: string;}): any;
-	add(tab: string, bounds?: Bounds, text?: string, creation_properties?: {name?: string;}): any;
-	add(tabbedpanel: string, bounds?: Bounds, text?: string, creation_properties?: {name?: string;}): any;
-	add(treeview: string, bounds?: Bounds, items?: string[], creation_properties?: {name?: string; itmes?: string[];}): any;
-	addEventListener(eventName: string, handler: Function, capturePhase?: boolean): void;
+	add(type: 'button', bounds?: Bounds, text?: string, creation_properties?: {name?: string;}): Button;
+	add(type: 'checkbox', bounds?: Bounds, text?: string, creation_properties?: {name?: string;}): Checkbox;
+	add(type: 'dropdownlist', bounds: Bounds, items?: string[], creation_properties?: {name?: string; items?: string[];}): DropDownList;
+	add(type: 'edittext', bounds?: Bounds, text?: string, creation_properties?: {name?: string; readonly?: boolean; noecho?: boolean; enterKeySignalsOnChange?: boolean; borderless?: boolean; multiline?: boolean; scrollable?: boolean;}): EditText;
+	add(type: 'flashplayer', bounds?: Bounds, movieToLoad?: string | File, creation_properties?: {name?: string;}): FlashPlayer;
+	add(type: 'group', bounds?: Bounds, creation_properties?: {name?: string;}): Group;
+	add(type: 'iconbutton', bounds?: Bounds, icon?: string | File, creation_properties?: {name?: string; style?: string; toggle?: boolean;}): IconButton;
+	add(type: 'image', bounds?: Bounds, icon?: string | File, creation_properties?: {name?: string;}): Image;
+	add(type: 'listbox', bounds: Bounds, items?: string[], creation_properties?: {name?: string; multiselect?: boolean; items?: string[]; numberOfColumns?: number; showHeaders?: boolean; columnWidths?: number[]; columnTitles?: string[];}): ListBox;
+	add(type: 'panel', bounds?: Bounds, text?: string, creation_properties?: {name?: string; borderStyle?: string; su1PanelCoordinates?: boolean;}): Panel;
+	add(type: 'progressbar', bounds?: Bounds, value?: number, minvalue?: number, maxvalue?: number, creation_properties?: {name?: string;}): ProgressBar;
+	add(type: 'radiobutton', bounds?: Bounds, text?: string, creation_properties?: {name?: string;}): RadioButton;
+	add(type: 'scrollbar', bounds?: Bounds, value?: number, minvalue?: number, maxvalue?: number, creation_properties?: {name?: string;}): Scrollbar;
+	add(type: 'slider', bounds?: Bounds, value?: number, minvalue?: number, maxvalue?: number, creation_properties?: {name?: string;}): Slider;
+	add(type: 'statictext', bounds?: Bounds, text?: string, creation_properties?: {name?: string; multiline?: boolean; scrolling?: boolean; truncate?: string;}): StaticText;
+	add(type: 'tab', bounds?: Bounds, text?: string, creation_properties?: {name?: string;}): Tab;
+	add(type: 'tabbedpanel', bounds?: Bounds, text?: string, creation_properties?: {name?: string;}): TabbedPanel;
+	add(type: 'treeview', bounds?: Bounds, items?: string[], creation_properties?: {name?: string; itmes?: string[];}): TreeView;
+	addEventListener(eventName: string, handler: (e: UIEvent) => void, capturePhase?: boolean): void;
 	dispatchEvent(eventObj: UIEvent): boolean;
 	findElement(name: string): any;
 	hide(): void;
@@ -240,10 +237,19 @@ declare class _WindowOrContainer {
 	remove(index: number): void;
 	remove(text: string): void;
 	remove(child: any): void;
-	removeEventListener(eventName: string, handler: Function, capturePhase?: boolean): void;
+	removeEventListener(eventName: string, handler: (e: UIEvent) => void, capturePhase?: boolean): void;
 	show(): any;
 	
 	onDraw: Function;
+	onActivate: Function;
+	onClose: Function;
+	onDeactivate: Function;
+	onMove: Function;
+	onMoving: Function;
+	onResize: Function;
+	onResizing: Function;
+	onShortcutKey: Function;
+	onShow: Function;
 }
 
 declare class Window extends _WindowOrContainer{
@@ -256,7 +262,7 @@ declare class Window extends _WindowOrContainer{
 	static find(type: string, title: string): Window;
 	static prompt(message: string, preset: string, title?: string): string;
 
-	constructor(type: string, title?: string, bounds?: Bounds, creation_properties?: {
+	constructor(type: 'dialog' | 'palette', title?: string, bounds?: Bounds, creation_properties?: {
 		resizeable?: boolean;
 		closeButton?: boolean;
 		maximizeButton?: boolean;
@@ -281,16 +287,6 @@ declare class Window extends _WindowOrContainer{
 	center(window?: Window): void;
 	close(result?: number): void;
 	update(): void;
-
-	onActivate: Function;
-	onClose: Function;
-	onDeactivate: Function;
-	onMove: Function;
-	onMoving: Function;
-	onResize: Function;
-	onResizing: Function;
-	onShortcutKey: Function;
-	onShow: Function;
 }
 
 declare class _Container extends _WindowOrContainer {
@@ -315,18 +311,21 @@ declare class Tab extends _Container {
 declare class Group extends _Container {}
 
 declare class __Control {
-	addEventListener(eventName: string, handler: Function, capturePhase?: boolean): void;
+	addEventListener(eventName: string, handler: (e: UIEvent) => void, capturePhase?: boolean): void;
 	dispatchEvent(eventObj: UIEvent): boolean;
 	hide(): void;
 	notify(event: string): void;
-	removeEventListener(eventName: string, handler: Function, capturePhase?: boolean): void;
+	removeEventListener(eventName: string, handler: (e: UIEvent) => void, capturePhase?: boolean): void;
 	show(): any;
 	
 	onDraw: Function;
+	onEnterKey: Function;
+	onActivate: Function;
+	onDeactivate: Function;
 }
 
 declare class _Control extends __Control {
-	alignment: string | [string, string];
+	alignment: Alignment | [Alignment, Alignment];
 	bounds: Bounds;
 	children: any[];
 	enabled: boolean;
@@ -336,7 +335,7 @@ declare class _Control extends __Control {
 	location: Point;
 	maximumSize: Dimension;
 	minimumSize: Dimension;
-	parent: any;
+	parent: _WindowOrContainer;
 	preferredSize: Dimension;
 	properties: any;
 	size: Dimension;
@@ -350,8 +349,9 @@ declare class _ListControl extends _Control {
 	items: ListItem[];
 	itemSize: Dimension;
 	
-	add(type: string, text: string, index?: number): ListItem | void;
-	find(text: string): ListItem | void;
+	add(type: 'item', text: string, index?: number): ListItem;
+	add(type: 'separator', text: string, index?: number): void;
+	find(text: string): ListItem;
 	remove(index: number): void;
 	remove(text: string): void;
 	remove(child: ListItem): void;
@@ -422,6 +422,7 @@ declare class IconButton extends _Control {
 	icon: string | File;
 	image: ScriptUI | string | File;
 	shortcutKey: string;
+	text: string;
 	title: string;
 	titleLayout: _TitleLayout;
 	

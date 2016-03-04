@@ -1,9 +1,12 @@
 {
 	"compilerOptions": {
-		"target": "ES3",
-		"noLib": true
+		"target": "es3",
+		"noLib": true,
+    "outFile": "KikakuPattern.jsx"
 	},
 	"files": [
-		"KikakuPattern.ts"
+		"KikakuPattern.ts",
+    "typings/aftereffects/ae.d.ts",
+    "typings/kikaku/Kikaku.d.ts"
 	]
 }

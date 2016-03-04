@@ -8,26 +8,15 @@
 			"taskName": "build",
 			"isBuildCommand": true,
 			"suppressTaskName": true,
-			"args": [
-				"-p", ".",
-				"--out", "KikakuPattern.jsx",
-				"-t", "es3",
-				"-noLib"
-			],
 			"problemMatcher": "$tsc"
 		},
 		{
 			"taskName": "watch",
-			"isBuildCommand": true,
 			"showOutput": "always",
 			"isWatching": true,
 			"suppressTaskName": true,
 			"args": [
-				"-w",
-				"-p", ".",
-				"--out", "KikakuPattern.jsx",
-				"-t", "es3",
-				"-noLib"
+				"-w"
 			],
 			"problemMatcher": "$tsc"
 		}
